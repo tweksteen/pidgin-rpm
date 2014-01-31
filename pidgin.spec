@@ -19,7 +19,7 @@
 %global dist .el6
 %endif
 %if 0%{?rhel} == 7
-%global fedora 16
+%global fedora 19
 %global dist .el7
 %endif
 
@@ -119,7 +119,7 @@
 
 Name:           pidgin
 Version:        2.10.8
-Release:        0%{?dist}
+Release:        1%{?dist}
 License:        GPLv2+ and GPLv2 and MIT
 # GPLv2+ - libpurple, gnt, finch, pidgin, most prpls
 # GPLv2 - silc & novell prpls
@@ -277,6 +277,14 @@ BuildRequires:  libgadu-devel
 
 %if %{api_docs}
 BuildRequires:  doxygen
+%endif
+
+# Need rpm 4.9+ to be able to do this filtering in arch packages with binaries
+%if 0%{?fedora} >= 15
+# Filter out plugins from provides
+%global __provides_exclude_from ^%{_libdir}/purple
+# Use define to delay evaluation
+%define __requires_exclude ^%(cat %{_builddir}/%{?buildsubdir}/plugins.list)|perl\\(Purple\\)
 %endif
 
 %description
@@ -514,7 +522,8 @@ SWITCHES="--with-extraversion=%{release}"
 %endif
 
 # FC5+ automatic -fstack-protector-all switch
-export RPM_OPT_FLAGS=${RPM_OPT_FLAGS//-fstack-protector/-fstack-protector-all}
+# F20+ uses -fstack-protector-strong
+export RPM_OPT_FLAGS=${RPM_OPT_FLAGS//-fstack-protector /-fstack-protector-all }
 export CFLAGS="$RPM_OPT_FLAGS"
 
 # remove after irc-sasl patch has been merged upstream
@@ -585,13 +594,16 @@ rm -rf html
 rm -f doc/html/installdox
 mv doc/html/ html/
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/gtk-doc/html/
-ln -sf ../../doc/pidgin-docs-%{version}/html/ \
+ln -sf ../../doc/pidgin-docs/html/ \
     $RPM_BUILD_ROOT%{_datadir}/gtk-doc/html/pidgin
 %endif
 
 %if %{build_only_libs}
 rm -f $RPM_BUILD_ROOT%{_sysconfdir}/gconf/schemas/purple.schemas
 %endif
+
+# Create list of plugins for __requires_exclude
+find %{buildroot}/%{_libdir}/purple-2 -name \*.so\* -printf '%f|' | sed -e 's/|$//' > plugins.list
 
 %if ! %{build_only_libs}
 %pre
@@ -747,6 +759,22 @@ rm -rf $RPM_BUILD_ROOT
   CVE-2013-6477, CVE-2013-6478, CVE-2013-6479, CVE-2013-6481, CVE-2013-6482, 
   CVE-2013-6482, CVE-2013-6482, CVE-2013-6483, CVE-2013-6484, CVE-2013-6485, 
   CVE-2013-6486, CVE-2013-6487, CVE-2013-6489, CVE-2013-6490 and CVE-2014-0020.
+
+* Thu Aug  8 2013 Jan Synáček <jsynacek@redhat.com> - 2.10.7-8
+- Remove versioned docdirs, BZ 994039
+
+* Sun Aug 04 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.10.7-7
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
+
+* Thu Aug 01 2013 Petr Pisar <ppisar@redhat.com> - 2.10.7-6
+- Perl 5.18 rebuild
+
+* Fri Jul 19 2013 Orion Poplawski <orion@cora.nwra.com> - 2.10.7-5
+- Fix setting -fstack-protector on F20+, use -fstack-protector-strong there
+- Filter out provides from plugins
+
+* Wed Jul 17 2013 Petr Pisar <ppisar@redhat.com> - 2.10.7-4
+- Perl 5.18 rebuild
 
 * Mon Jul 01 2013 Jan Synáček <jsynacek@redhat.com> - 2.10.7-3
 - Require cyrus-sasl-scram, BZ 979052
@@ -1007,10 +1035,10 @@ rm -rf $RPM_BUILD_ROOT
 - Voice and Video support via farsight2 (Fedora 11+)
 - Numerous other bug fixes
 
-* Tue Aug 06 2009 Warren Togami <wtogami@redhat.com> 2.6.0-0.11.20090812
+* Thu Aug 06 2009 Warren Togami <wtogami@redhat.com> 2.6.0-0.11.20090812
 - new snapshot at the request of maiku
 
-* Tue Aug 06 2009 Warren Togami <wtogami@redhat.com> 2.6.0-0.10.20090806
+* Thu Aug 06 2009 Warren Togami <wtogami@redhat.com> 2.6.0-0.10.20090806
 - new snapshot - theoretically better sound quality in voice chat
 
 * Tue Aug 04 2009 Warren Togami <wtogami@redhat.com> 2.6.0-0.9.20090804
@@ -1206,7 +1234,7 @@ rm -rf $RPM_BUILD_ROOT
 - Add missing Requires to -devel packages
 - Add missing BuildRequires for libxml2-devel
 
-* Fri May 31 2007 Stu Tomlinson <stu@nosnilmot.com> - 2.0.1-2
+* Fri Jun 1 2007 Stu Tomlinson <stu@nosnilmot.com> - 2.0.1-2
 - Call g_thread_init early (#241883)
 - Fix purple-remote syntax error (#241905)
 
@@ -1640,7 +1668,7 @@ rm -rf $RPM_BUILD_ROOT
 * Tue Jun 22 2004 Warren Togami <wtogami@redhat.com> 0.78-8
 - rebuilt
 
-* Mon Jun 08 2004 Warren Togami <wtogami@redhat.com> 0.78-7
+* Mon Jun 07 2004 Warren Togami <wtogami@redhat.com> 0.78-7
 - CVS backport 125: MSN disconnect on non-fatal error fix
                126: Paste html with img crash fix
                127: Misplaced free fix
@@ -1676,7 +1704,7 @@ rm -rf $RPM_BUILD_ROOT
 * Sun Apr 25 2004 Warren Togami <wtogami@redhat.com> 0.77-1
 - 0.77, remove cvs backports
 
-* Fri Apr 15 2004 Warren Togami <wtogami@redhat.com> 0.76-6
+* Thu Apr 15 2004 Warren Togami <wtogami@redhat.com> 0.76-6
 - CVS backports:
   111 Prevent Crash during password change if blank fields
   112 Prevent Crash if remote sends invalid characters
@@ -1684,7 +1712,7 @@ rm -rf $RPM_BUILD_ROOT
 - Tray Icon enabled by default
 - Relabel internal version with V-R
 
-* Fri Apr 14 2004 Warren Togami <wtogami@redhat.com> 0.76-5
+* Wed Apr 14 2004 Warren Togami <wtogami@redhat.com> 0.76-5
 - CVS backports: 
   102 Fix ^F keybinding when gtkrc is set to emacs mode
   103 Add Missing File: evolution-1.5.x buildability
@@ -1734,7 +1762,7 @@ rm -rf $RPM_BUILD_ROOT
 * Thu Dec 04 2003 Christopher Blizzard <blizzard@redhat.com> 1:0.74-9
 - Bump release to rebuild for fc2.
 
-* Wed Nov 25 2003 Christopher Blizzard <blizzard@redhat.com> 1:0.74-0
+* Wed Nov 26 2003 Christopher Blizzard <blizzard@redhat.com> 1:0.74-0
 - Upgrade to 0.74
 - Include libao-devel and startup-notification-devel to the
   buildreq list
